@@ -1,10 +1,37 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "northh"
 version = "0.1.0"
-description = "personal thinking workspace"
+description = "a personal thinking workspace — capture ideas, projects, domains, journal from the terminal"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["textual", "pyfiglet"]
+license = {text = "MIT"}
+authors = [
+    {name = "Harsh Jain", email = "harshrajivjain10@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Utilities",
+    "Topic :: Text Processing :: Markdown",
+]
+dependencies = ["textual>=8.0", "pyfiglet>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/Dark-Knight499/northh"
+Repository = "https://github.com/Dark-Knight499/northh"
+Documentation = "https://github.com/Dark-Knight499/northh/tree/main/docs"
+
+[project.scripts]
+northh = "main:main"
 
 [dependency-groups]
 dev = [

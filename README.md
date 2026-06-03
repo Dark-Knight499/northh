@@ -1,388 +1,154 @@
-# North v1
+<div align="center">
 
-## Vision
+```
+                 __  __ 
+  ___  ___  ____/ /_/ / 
+ / _ \/ _ \/ __/ __/ _ \
+/_//_/\___/_/  \__/_//_/
+                        
+```
 
-North is a personal thinking workspace.
+# north
 
-North is designed for people who generate many ideas, explore many domains, work on multiple projects, and learn through reflection and discussion.
+**a place to think**
 
-North is not a productivity application.
+ideas appear faster than you can organize them. north lets you catch them first and figure out the rest later.
 
-North is not a task manager.
+<br>
 
-North is not a note-taking application.
+[![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-262626?style=flat-square&logo=python&logoColor=f59e0b&labelColor=0d0d0d&color=262626)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-262626?style=flat-square&labelColor=0d0d0d&color=262626)](./LICENSE)
+[![uv](https://img.shields.io/badge/uv-262626?style=flat-square&logo=uv&logoColor=f59e0b&labelColor=0d0d0d&color=262626)](https://docs.astral.sh/uv/)
+[![Textual](https://img.shields.io/badge/built%20with-Textual-262626?style=flat-square&logo=textual&logoColor=f59e0b&labelColor=0d0d0d&color=262626)](https://textual.textualize.io)
 
-North is a workspace for capturing, refining, organizing, and revisiting thoughts.
+<br>
 
-The primary goal of North is reducing friction between having an idea and preserving that idea.
+[Quick Start](#-quick-start) · [Usage](#-usage) · [Philosophy](docs/philosophy.md) · [Keybindings](#-keybindings)
 
----
-
-# Problem
-
-Ideas are generated continuously.
-
-Examples:
-
-* startup ideas
-* project ideas
-* learning insights
-* observations
-* arguments
-* frameworks
-* questions
-
-These ideas often become fragmented across:
-
-* memory
-* chats
-* notes
-* temporary files
-* conversations
-
-As a result:
-
-* ideas get lost
-* ideas are difficult to revisit
-* ideas are difficult to refine
-* ideas become disconnected
+</div>
 
 ---
 
-# Philosophy
-
-Capture First.
-
-Organize Later.
-
-The cost of losing an idea is higher than the cost of storing an unorganized idea.
-
-North should encourage idea capture before categorization.
+<img src=".github/demo.gif" width="100%" alt="north demo — home, capture, ideas browser, projects browser">
 
 ---
 
-# Core User
+## why
 
-A curious builder.
+you have ideas all the time. in conversations, while reading, at 3am. you tell yourself you'll remember. you won't.
 
-Someone who:
+by the time you've picked the right folder, created the right file, figured out the right category — the thought is gone.
 
-* learns through discussion
-* learns through exploration
-* generates many ideas
-* works on multiple projects
-* studies multiple domains
-* values thinking and reflection
+north flips it: **capture first, organize later.**
+
+everything is markdown in `~/.northh/`. no database. no lock-in. your editor, your tools, your data.
 
 ---
 
-# Core Concepts
+## 📖 the four areas
 
-## Ideas
+north gives a user four containers. each serves a different kind of thinking.
 
-Raw thoughts.
+**ideas** are raw captures. a thought, an observation, a question at 3am. no structure, no context needed. just timestamped and preserved. the digital equivalent of a napkin sketch.
 
-Examples:
+**projects** are structured explorations. when an idea gains momentum, it becomes a project. each project gets its own directory, its own entries. entries can have titles — the title becomes the filename. this is for the user's active builds, the things they're shaping over time.
 
-* observations
-* arguments
-* startup concepts
-* random questions
-* frameworks
+**domains** are long-term learning spaces. unlike projects, domains don't have a finish line. machine learning, systems design, mathematics — areas the user returns to repeatedly, building understanding over months and years.
 
-Ideas are lightweight and fast to create.
+**journal** is personal reflection. daily entries append to a date-stamped file, creating a timeline the user can look back on. not notes for a project, not a capture for later — just the user talking to their future self.
 
-Ideas are timestamped and preserved.
+the boundary between them is intentionally fuzzy. an idea can become a project. a project can reveal a domain. the user doesn't need to get it right upfront — they just need to get it down.
 
 ---
 
-## Projects
+## 🚀 Quick Start
 
-Structured explorations.
+### Linux / macOS
 
-Examples:
+```bash
+uv tool install northh
+northh
+```
 
-* Axiom
-* Portfolio
-* Reminder Agent
-* North
+### Windows (PowerShell)
 
-Projects provide a place for ongoing development of an idea.
+```powershell
+uv tool install northh
+northh
+```
 
-Projects contain:
+### or with pip
 
-* thoughts
-* features
-* architecture
-* experiments
-* notes
+```bash
+pip install northh
+northh
+```
 
----
-
-## Domains
-
-Long-term learning spaces.
-
-Examples:
-
-* Data
-* Systems
-* AI
-* Mathematics
-* Networking
-* Cloud
-
-Domains contain:
-
-* resources
-* notes
-* references
-* learning material
-* reflections
-
-Domains represent areas of exploration rather than projects.
+first time? it creates `~/.northh/` and drops you into the TUI. that's it.
 
 ---
 
-## Journal
+## ⌨️ once you're in
 
-Personal reflection.
-
-Used for:
-
-* daily thoughts
-* observations
-* lessons
-* emotional reflections
-
-The journal is intended to capture the evolution of thinking over time.
-
----
-
-# User Experience Principles
-
-Minimal Friction.
-
-Minimal Configuration.
-
-Minimal Cognitive Load.
-
-The system should feel faster than manually creating files.
-
-The system should encourage thinking rather than management.
+| key | what it does |
+|-----|-------------|
+| `Space` | capture whatever's on your mind |
+| `I` | ideas |
+| `P` | projects |
+| `D` | domains |
+| `J` | journal |
+| `T` | today's journal entry |
+| `N` | new entry (inside a browser) |
+| `/` | search/filter |
+| `Enter` | open a file in your editor |
+| `O` | open (alt to enter) |
+| `Esc` | go back |
+| `?` | help |
+| `Q` | quit |
 
 ---
 
-# User Workflow
+## 📂 what's inside
 
-Idea Appears
-↓
-Capture
-↓
-Store
-↓
-Revisit
-↓
-Refine
-↓
-Connect
+```
+~/.northh/
+├── ideas/        # timestamped.md — raw capture
+├── projects/     # project-name/entry.md — structured work
+├── domains/      # domain-name/entry.md — learning
+└── journal/      # YYYY-MM-DD.md — daily reflection
+```
 
----
+the repo itself:
 
-Project Idea Appears
-↓
-Open Project
-↓
-Capture Thought
-↓
-Continue Exploration
-
----
-
-Learning Insight Appears
-↓
-Store in Domain
-↓
-Revisit Later
+```
+northh/
+├── src/
+│   ├── functions/        # core logic, listing, editor, ai
+│   └── ui/
+│       ├── app.py        # textual app shell
+│       └── screens/      # home, browser, capture, new entry, conflict, help
+├── tests/                # pytest — unit + integration + flow
+└── docs/
+    └── philosophy.md     # the full vision
+```
 
 ---
 
-# Functional Requirements
+## 🛠 building it
 
-The user must be able to:
+```bash
+git clone git@github.com:Dark-Knight499/northh.git
+cd northh
+uv sync
+uv run python main.py
+uv run pytest
+```
 
-* capture ideas
-* create project entries
-* create domain entries
-* create journal entries
-* browse existing content
-* search existing content
-* revisit previous thoughts
-
----
-
-# Optional Future Capabilities
-
-Speech-to-Text
-
-Text-to-Speech
-
-AI Refinement
-
-AI Summarization
-
-Semantic Search
-
-Idea Linking
-
-Knowledge Graphs
-
-Thought Connections
-
-These are enhancements and not part of the core product.
+windows (powershell) is the same — just make sure python 3.13+ is on your path.
 
 ---
 
-# Non Goals
+## 📜 license
 
-North is not:
+MIT. go build something.
 
-* a task manager
-* a habit tracker
-* a calendar
-* a kanban board
-* a productivity dashboard
-* a project management system
-* a social platform
-
-North should avoid becoming a general productivity application.
-
----
-
-# Success Criteria
-
-A user can capture a thought in seconds.
-
-A user can find a previous thought quickly.
-
-Ideas are preserved rather than lost.
-
-Projects accumulate knowledge over time.
-
-Domains accumulate learning over time.
-
-North becomes a trusted workspace for exploration and thinking.
-
----
-
-# Guiding Principle
-
-North should feel like a place to think.
-
-Not a place to manage thinking.
-
-
-# Workspace Philosophy
-
-North is fundamentally a workspace.
-
-The workspace is the product.
-
-The CLI is an interface.
-
-The TUI is an interface.
-
-Future GUIs are interfaces.
-
-The knowledge stored inside the workspace is the primary asset.
-
-All interfaces should be replaceable without affecting the underlying knowledge.
-
-If every tool inside North disappeared tomorrow, the workspace should remain fully usable through folders and markdown files.
-
----
-
-# Workspace First Design
-
-North is built around a folder-based knowledge structure.
-
-Knowledge is stored as files.
-
-Knowledge is not stored inside an application.
-
-Knowledge is not locked inside a database.
-
-Knowledge remains accessible through standard filesystem tools.
-
-The user should always own and control their knowledge.
-
----
-
-# Workspace Structure
-
-The North Workspace contains four primary areas.
-
-Ideas
-
-Projects
-
-Domains
-
-Journal
-
-These areas exist independently of any interface.
-
-The CLI simply provides a faster way to interact with them.
-
----
-
-# Interface Philosophy
-
-North should never require a CLI.
-
-North should never require a TUI.
-
-North should never require AI.
-
-North should never require Speech-to-Text.
-
-These tools exist to improve the experience.
-
-They are not the foundation.
-
-The foundation is:
-
-Folders
-+
-Markdown Files
-+
-User Knowledge
-
----
-
-# Long-Term Goal
-
-The goal of North is not to build software.
-
-The goal of North is to create a durable personal knowledge workspace.
-
-A workspace where:
-
-* ideas accumulate
-* projects evolve
-* learning compounds
-* reflections persist
-
-over years.
-
-The software layer should serve the workspace.
-
-The workspace should never serve the software.
-
----
-
-# Design Rule
-
-Knowledge must outlive the implementation.
-
-The workspace should remain valuable even if North itself is deleted.
