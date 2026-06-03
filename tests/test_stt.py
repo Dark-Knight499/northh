@@ -165,7 +165,9 @@ class TestTranscribe:
             result = transcribe("/fake/path.wav")
 
         assert result == "test"
-        mock_whisper.assert_called_once_with("tiny", device="cpu", compute_type="int8")
+        mock_whisper.assert_called_once_with(
+            "tiny", device="cpu", compute_type="default"
+        )
 
 
 class TestRecordAndTranscribe:

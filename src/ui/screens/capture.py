@@ -87,6 +87,15 @@ class Capture(Screen):
     def on_mount(self):
         inp = self.query_one("#capture-input", TextArea)
         inp.focus()
+        threading.Thread(target=self._prewarm_model, daemon=True).start()
+
+    def _prewarm_model(self):
+        try:
+            from src.functions.stt import load_model
+
+            load_model()
+        except Exception:
+            pass
 
     def _text(self) -> str:
         return self.query_one("#capture-input", TextArea).text.strip()
