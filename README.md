@@ -29,7 +29,7 @@ the cost of losing an idea is higher than the cost of storing an unorganized one
 
 ---
 
-<img src=".github/demo.svg" width="100%" alt="north home screen">
+<img src=".github/demo.gif" width="100%" alt="north demo — home, capture, ideas, projects, domains, journal, help">
 
 <img src=".github/demo-browser.svg" width="100%" alt="north ideas browser">
 

@@ -2,3 +2,5 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 .venv/
+src/northh.egg-info/
+.northh-demo-tmp/
