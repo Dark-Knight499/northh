@@ -2,7 +2,7 @@ import sys
 
 from src.functions import core, init, list as list_fn
 
-USAGE = """usage: northh <command> [args] [--voice]
+USAGE = """usage: northh <command> [args] [--voice] [--lang en|hi]
 
 commands:
   init                    initialize workspace
@@ -21,7 +21,21 @@ commands:
   list journal            list journal entries
   list project <name>     list entries in a project
   list domain <name>      list entries in a domain
+
+options:
+  --voice                 record via microphone
+  --lang en|hi            speech language (default: en)
 """
+
+
+_LANGUAGES = {"en": "english", "hi": "hindi"}
+
+
+def _voice_lang():
+    for i, a in enumerate(sys.argv):
+        if a == "--lang" and i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return "en"
 
 
 def main():
@@ -37,9 +51,11 @@ def main():
         init.init_workspace()
     elif cmd == "idea":
         if "--voice" in sys.argv:
-            from src.functions.stt import record_and_transcribe
+            from src.functions.stt import record_and_transcribe_vad
 
-            text = record_and_transcribe()
+            lang = _voice_lang()
+            print(f"listening... (speak now) [lang={lang}]")
+            text = record_and_transcribe_vad(language=lang)
             if text:
                 core.capture_idea(text)
                 print(f"captured idea: {text}")
@@ -55,9 +71,11 @@ def main():
             if len(sys.argv) < 3:
                 print("usage: northh project <name> --voice")
                 return
-            from src.functions.stt import record_and_transcribe
+            from src.functions.stt import record_and_transcribe_vad
 
-            text = record_and_transcribe()
+            lang = _voice_lang()
+            print(f"listening... (speak now) [lang={lang}]")
+            text = record_and_transcribe_vad(language=lang)
             if text:
                 core.create_project_entry(sys.argv[2], text)
                 print(f"captured project entry: {text}")
@@ -73,9 +91,11 @@ def main():
             if len(sys.argv) < 3:
                 print("usage: northh domain <name> --voice")
                 return
-            from src.functions.stt import record_and_transcribe
+            from src.functions.stt import record_and_transcribe_vad
 
-            text = record_and_transcribe()
+            lang = _voice_lang()
+            print(f"listening... (speak now) [lang={lang}]")
+            text = record_and_transcribe_vad(language=lang)
             if text:
                 core.create_domain_entry(sys.argv[2], text)
                 print(f"captured domain entry: {text}")
@@ -88,9 +108,11 @@ def main():
             core.create_domain_entry(sys.argv[2], " ".join(sys.argv[3:]))
     elif cmd == "journal":
         if "--voice" in sys.argv:
-            from src.functions.stt import record_and_transcribe
+            from src.functions.stt import record_and_transcribe_vad
 
-            text = record_and_transcribe()
+            lang = _voice_lang()
+            print(f"listening... (speak now) [lang={lang}]")
+            text = record_and_transcribe_vad(language=lang)
             if text:
                 core.create_journal_entry(text)
                 print(f"captured journal entry: {text}")

@@ -17,12 +17,18 @@ from src.functions.core import (
     create_domain_entry,
     create_journal_entry,
 )
+from src.functions.settings import get_setting
+
+
+_STT_LANGUAGES = {"en": "EN", "hi": "HI"}
 
 
 class Capture(Screen):
     BINDINGS = [
         Binding("ctrl+s", "submit", "save", show=False),
         Binding("ctrl+r", "record", "record", show=False),
+        Binding("ctrl+l", "toggle_lang", "lang", show=False),
+        Binding("ctrl+t", "toggle_stt_mode", "mode", show=False),
         Binding("escape", "dismiss", "cancel", show=True),
         Binding("e", "open_editor", "editor", show=False),
     ]
@@ -33,6 +39,9 @@ class Capture(Screen):
         self.obj_name = obj_name
         self._recording = False
         self._stop_event = threading.Event()
+        self._language = "en"
+        self._pre_recording_text = ""
+        self._stt_mode = get_setting("stt_mode")
 
     def compose(self):
         yield Vertical(
@@ -48,8 +57,6 @@ class Capture(Screen):
         )
 
     def _title(self) -> str:
-        if self._recording:
-            return "recording... [●]"
         if self.mode == "idea":
             return "quick capture"
         if self.mode == "project_items":
@@ -62,12 +69,22 @@ class Capture(Screen):
 
     def _help_bar(self):
         t = Text()
+        mode_tag = "PTT" if self._stt_mode == "push-to-talk" else "LIVE"
+        lang_tag = _STT_LANGUAGES.get(self._language, self._language.upper())
+        t.append(f"[{mode_tag}]", style="bold #6b7280")
+        t.append(" ")
+        t.append(f"[{lang_tag}]", style="bold #6b7280")
+        t.append("  ", style="#e5e5e5")
         if self._recording:
             t.append("[Ctrl+R]", style="bold #ef4444")
-            t.append(" Stop Recording  ", style="#e5e5e5")
+            t.append(" Stop  ", style="#e5e5e5")
         else:
             t.append("[Ctrl+R]", style="bold #f59e0b")
             t.append(" Record  ", style="#e5e5e5")
+        t.append("[Ctrl+L]", style="bold #6b7280")
+        t.append(" Lang  ", style="#e5e5e5")
+        t.append("[Ctrl+T]", style="bold #6b7280")
+        t.append(" Mode  ", style="#e5e5e5")
         t.append("[Ctrl+S]", style="bold #f59e0b")
         t.append(" Save  ", style="#e5e5e5")
         t.append("[Enter]", style="bold #f59e0b")
@@ -122,6 +139,26 @@ class Capture(Screen):
             capture_idea(text)
         self.app.post_message(DataChanged())
 
+    def action_toggle_lang(self):
+        langs = list(_STT_LANGUAGES)
+        idx = langs.index(self._language) if self._language in langs else 0
+        self._language = langs[(idx + 1) % len(langs)]
+        tag = _STT_LANGUAGES[self._language]
+        self.query_one("#capture-title", Label).update(f"language: {tag}")
+        self._refresh_help_bar()
+        self.set_timer(0.7, self._refresh_title)
+
+    def action_toggle_stt_mode(self):
+        from src.functions.settings import set_setting
+
+        modes = {"push-to-talk": "live", "live": "push-to-talk"}
+        self._stt_mode = modes.get(self._stt_mode, "push-to-talk")
+        set_setting("stt_mode", self._stt_mode)
+        mode_tag = "PTT" if self._stt_mode == "push-to-talk" else "LIVE"
+        self.query_one("#capture-title", Label).update(f"mode: {mode_tag}")
+        self._refresh_help_bar()
+        self.set_timer(0.7, self._refresh_title)
+
     def action_record(self):
         if self._recording:
             self._recording = False
@@ -131,23 +168,32 @@ class Capture(Screen):
         else:
             self._recording = True
             self._stop_event = threading.Event()
-            self._refresh_title()
+            self._pre_recording_text = self.query_one(
+                "#capture-input", TextArea
+            ).text.strip()
+            if self._stt_mode == "push-to-talk":
+                self.query_one("#capture-title", Label).update("recording... [\u25cf]")
+            else:
+                self.query_one("#capture-title", Label).update("listening...")
             self._refresh_help_bar()
             threading.Thread(target=self._record_worker, daemon=True).start()
 
     def _record_worker(self):
+        if self._stt_mode == "push-to-talk":
+            self._record_worker_ptt()
+        else:
+            self._record_worker_live()
+
+    def _record_worker_ptt(self):
         try:
             from src.functions.stt import record_audio, transcribe
         except ImportError as e:
-            self.app.call_from_thread(
-                self._on_recording_error,
-                f"missing deps: {e}",
-            )
+            self.app.call_from_thread(self._on_recording_error, f"missing deps: {e}")
             return
 
         try:
             path = record_audio(stop_event=self._stop_event)
-            text = transcribe(path)
+            text = transcribe(path, language=self._language)
         except Exception as e:
             self.app.call_from_thread(self._on_recording_error, str(e))
             return
@@ -163,24 +209,68 @@ class Capture(Screen):
         else:
             self.app.call_from_thread(self._on_recording_empty)
 
+    def _record_worker_live(self):
+        try:
+            from src.functions.stt import record_and_transcribe_vad
+        except ImportError as e:
+            self.app.call_from_thread(self._on_recording_error, f"missing deps: {e}")
+            return
+
+        def on_partial(text, is_final):
+            self.app.call_from_thread(self._inject_live_text, text, is_final)
+
+        try:
+            text = record_and_transcribe_vad(
+                stop_event=self._stop_event,
+                live_callback=on_partial,
+                language=self._language,
+            )
+        except Exception as e:
+            self.app.call_from_thread(self._on_recording_error, str(e))
+            return
+
+        if not text:
+            self.app.call_from_thread(self._on_recording_empty)
+
     def _inject_text(self, text: str):
         inp = self.query_one("#capture-input", TextArea)
-        existing = inp.text.strip()
-        if existing:
-            inp.text = f"{existing}\n{text}"
+        if self._pre_recording_text:
+            inp.text = f"{self._pre_recording_text}\n{text}"
         else:
             inp.text = text
-        inp.cursor = (len(inp.text.split("\n")) - 1, len(inp.text.split("\n")[-1]))
+        self._pre_recording_text = ""
+        lines = inp.text.split("\n")
+        inp.cursor = (len(lines) - 1, len(lines[-1]))
         self._recording = False
         self._refresh_title()
         self._refresh_help_bar()
 
+    def _inject_live_text(self, text: str, is_final: bool):
+        inp = self.query_one("#capture-input", TextArea)
+        if is_final:
+            if self._pre_recording_text:
+                inp.text = f"{self._pre_recording_text}\n{text}"
+            else:
+                inp.text = text
+            self._pre_recording_text = ""
+            lines = inp.text.split("\n")
+            inp.cursor = (len(lines) - 1, len(lines[-1]))
+            self._recording = False
+            self._refresh_title()
+            self._refresh_help_bar()
+        else:
+            self.query_one("#capture-title", Label).update("recording... [\u25cf]")
+            inp.text = text
+            self._refresh_help_bar()
+
     def _on_recording_error(self, msg: str):
+        self._pre_recording_text = ""
         self.query_one("#capture-title", Label).update(f"error: {msg}")
         self._recording = False
         self._refresh_help_bar()
 
     def _on_recording_empty(self):
+        self._pre_recording_text = ""
         self.query_one("#capture-title", Label).update(self._title())
         self._recording = False
         self._refresh_help_bar()
