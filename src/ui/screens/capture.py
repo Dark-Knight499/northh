@@ -1,3 +1,5 @@
+import os
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +22,7 @@ from src.functions.core import (
 class Capture(Screen):
     BINDINGS = [
         Binding("ctrl+s", "submit", "save", show=False),
+        Binding("ctrl+r", "record", "record", show=False),
         Binding("escape", "dismiss", "cancel", show=True),
         Binding("e", "open_editor", "editor", show=False),
     ]
@@ -28,12 +31,16 @@ class Capture(Screen):
         super().__init__()
         self.mode = mode
         self.obj_name = obj_name
+        self._recording = False
+        self._stop_event = threading.Event()
 
     def compose(self):
         yield Vertical(
             Vertical(
                 Label(self._title(), id="capture-title"),
-                TextArea(placeholder="type your thought...", id="capture-input"),
+                TextArea(
+                    placeholder="type or speak your thought...", id="capture-input"
+                ),
                 id="capture-box",
             ),
             Static(self._help_bar(), classes="help-bar"),
@@ -41,6 +48,8 @@ class Capture(Screen):
         )
 
     def _title(self) -> str:
+        if self._recording:
+            return "recording... [●]"
         if self.mode == "idea":
             return "quick capture"
         if self.mode == "project_items":
@@ -53,6 +62,12 @@ class Capture(Screen):
 
     def _help_bar(self):
         t = Text()
+        if self._recording:
+            t.append("[Ctrl+R]", style="bold #ef4444")
+            t.append(" Stop Recording  ", style="#e5e5e5")
+        else:
+            t.append("[Ctrl+R]", style="bold #f59e0b")
+            t.append(" Record  ", style="#e5e5e5")
         t.append("[Ctrl+S]", style="bold #f59e0b")
         t.append(" Save  ", style="#e5e5e5")
         t.append("[Enter]", style="bold #f59e0b")
@@ -98,6 +113,75 @@ class Capture(Screen):
             capture_idea(text)
         self.app.post_message(DataChanged())
 
+    def action_record(self):
+        if self._recording:
+            self._recording = False
+            self._stop_event.set()
+            self.query_one("#capture-title", Label).update("transcribing...")
+            self._refresh_help_bar()
+        else:
+            self._recording = True
+            self._stop_event = threading.Event()
+            self._refresh_title()
+            self._refresh_help_bar()
+            threading.Thread(target=self._record_worker, daemon=True).start()
+
+    def _record_worker(self):
+        try:
+            from src.functions.stt import record_audio, transcribe
+        except ImportError as e:
+            self.app.call_from_thread(
+                self._on_recording_error,
+                f"missing deps: {e}",
+            )
+            return
+
+        try:
+            path = record_audio(stop_event=self._stop_event)
+            text = transcribe(path)
+        except Exception as e:
+            self.app.call_from_thread(self._on_recording_error, str(e))
+            return
+        finally:
+            if "path" in locals():
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
+        if text:
+            self.app.call_from_thread(self._inject_text, text)
+        else:
+            self.app.call_from_thread(self._on_recording_empty)
+
+    def _inject_text(self, text: str):
+        inp = self.query_one("#capture-input", TextArea)
+        existing = inp.text.strip()
+        if existing:
+            inp.text = f"{existing}\n{text}"
+        else:
+            inp.text = text
+        inp.cursor = (len(inp.text.split("\n")) - 1, len(inp.text.split("\n")[-1]))
+        self._recording = False
+        self._refresh_title()
+        self._refresh_help_bar()
+
+    def _on_recording_error(self, msg: str):
+        self.query_one("#capture-title", Label).update(f"error: {msg}")
+        self._recording = False
+        self._refresh_help_bar()
+
+    def _on_recording_empty(self):
+        self.query_one("#capture-title", Label).update(self._title())
+        self._recording = False
+        self._refresh_help_bar()
+
+    def _refresh_title(self):
+        self.query_one("#capture-title", Label).update(self._title())
+
+    def _refresh_help_bar(self):
+        self.query_one(".help-bar", Static).update(self._help_bar())
+
     def action_open_editor(self):
         if self.mode == "journal":
             import subprocess
@@ -119,6 +203,8 @@ class Capture(Screen):
                 self.app.post_message(DataChanged())
 
     def action_dismiss(self):
+        if self._recording:
+            self._stop_event.set()
         self._pop()
 
     def _pop(self):

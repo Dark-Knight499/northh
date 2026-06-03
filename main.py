@@ -2,14 +2,18 @@ import sys
 
 from src.functions import core, init, list as list_fn
 
-USAGE = """usage: northh <command> [args]
+USAGE = """usage: northh <command> [args] [--voice]
 
 commands:
   init                    initialize workspace
   idea <text>             capture an idea
+  idea --voice            capture an idea via speech
   project <name> <text>   create a project entry
+  project <name> --voice  create a project entry via speech
   domain <name> <text>    create a domain entry
+  domain <name> --voice   create a domain entry via speech
   journal <text>          create a journal entry
+  journal --voice         create a journal entry via speech
   list                    list everything
   list ideas              list ideas
   list projects           list projects
@@ -32,25 +36,71 @@ def main():
     if cmd == "init":
         init.init_workspace()
     elif cmd == "idea":
-        if len(sys.argv) < 3:
+        if "--voice" in sys.argv:
+            from src.functions.stt import record_and_transcribe
+
+            text = record_and_transcribe()
+            if text:
+                core.capture_idea(text)
+                print(f"captured idea: {text}")
+            else:
+                print("no speech detected")
+        elif len(sys.argv) < 3:
             print("usage: northh idea <text>")
             return
-        core.capture_idea(" ".join(sys.argv[2:]))
+        else:
+            core.capture_idea(" ".join(sys.argv[2:]))
     elif cmd == "project":
-        if len(sys.argv) < 4:
+        if "--voice" in sys.argv:
+            if len(sys.argv) < 3:
+                print("usage: northh project <name> --voice")
+                return
+            from src.functions.stt import record_and_transcribe
+
+            text = record_and_transcribe()
+            if text:
+                core.create_project_entry(sys.argv[2], text)
+                print(f"captured project entry: {text}")
+            else:
+                print("no speech detected")
+        elif len(sys.argv) < 4:
             print("usage: northh project <name> <text>")
             return
-        core.create_project_entry(sys.argv[2], " ".join(sys.argv[3:]))
+        else:
+            core.create_project_entry(sys.argv[2], " ".join(sys.argv[3:]))
     elif cmd == "domain":
-        if len(sys.argv) < 4:
+        if "--voice" in sys.argv:
+            if len(sys.argv) < 3:
+                print("usage: northh domain <name> --voice")
+                return
+            from src.functions.stt import record_and_transcribe
+
+            text = record_and_transcribe()
+            if text:
+                core.create_domain_entry(sys.argv[2], text)
+                print(f"captured domain entry: {text}")
+            else:
+                print("no speech detected")
+        elif len(sys.argv) < 4:
             print("usage: northh domain <name> <text>")
             return
-        core.create_domain_entry(sys.argv[2], " ".join(sys.argv[3:]))
+        else:
+            core.create_domain_entry(sys.argv[2], " ".join(sys.argv[3:]))
     elif cmd == "journal":
-        if len(sys.argv) < 3:
+        if "--voice" in sys.argv:
+            from src.functions.stt import record_and_transcribe
+
+            text = record_and_transcribe()
+            if text:
+                core.create_journal_entry(text)
+                print(f"captured journal entry: {text}")
+            else:
+                print("no speech detected")
+        elif len(sys.argv) < 3:
             print("usage: northh journal <text>")
             return
-        core.create_journal_entry(" ".join(sys.argv[2:]))
+        else:
+            core.create_journal_entry(" ".join(sys.argv[2:]))
     elif cmd == "list":
         if len(sys.argv) < 3:
             list_fn.ideas()

@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: Utilities",
     "Topic :: Text Processing :: Markdown",
 ]
-dependencies = ["textual>=8.0", "pyfiglet>=1.0"]
+dependencies = ["textual>=8.0", "pyfiglet>=1.0", "faster-whisper>=1.1.0", "sounddevice>=0.5.0", "numpy>=2.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/Dark-Knight499/northh"
