@@ -1,0 +1,12 @@
+[project]
+name = "northh"
+version = "0.1.0"
+description = "personal thinking workspace"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["textual", "pyfiglet"]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.4.0",
+]
