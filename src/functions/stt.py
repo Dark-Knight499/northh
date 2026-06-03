@@ -36,7 +36,7 @@ def load_model(model_size="tiny"):
         _log(f"loading whisper model '{model_size}'...")
         from faster_whisper import WhisperModel
 
-        _whisper_model = WhisperModel(model_size, device="cpu", compute_type="default")
+        _whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
         elapsed = time.time() - t0
         _log(f"model loaded in {elapsed:.1f}s")
         _MODEL_LOADED.set()
