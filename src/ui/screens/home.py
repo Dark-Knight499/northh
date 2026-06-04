@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rich.text import Text
+from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static

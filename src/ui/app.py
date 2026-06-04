@@ -6,6 +6,7 @@ from src.ui.screens.home import Home
 from src.ui.screens.capture import Capture
 from src.ui.screens.browser import Browser
 from src.ui.screens.help import HelpOverlay
+from src.ui.screens.spaceship import Spaceship
 
 
 class North(App):
@@ -175,6 +176,7 @@ class North(App):
         Binding("?", "help", show=False, priority=True),
         Binding("q", "quit", show=False, priority=True),
         Binding("escape", "back", show=False, priority=True),
+        Binding("ctrl+g", "spaceship", show=False, priority=True),
     ]
 
     def on_mount(self):
@@ -186,6 +188,9 @@ class North(App):
                 screen._load()
             elif isinstance(screen, Home):
                 screen._load_recent()
+
+    def action_spaceship(self):
+        self.push_screen(Spaceship())
 
     def action_capture(self):
         mode, obj_name = self._capture_context()
