@@ -174,7 +174,7 @@ class North(App):
         Binding("t", "today", show=False, priority=True),
         Binding("?", "help", show=False, priority=True),
         Binding("q", "quit", show=False, priority=True),
-        Binding("escape", "back", show=False, priority=True),
+        Binding("escape", "back", show=False),
     ]
 
     def on_mount(self):

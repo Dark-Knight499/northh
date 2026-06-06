@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rich.text import Text
+from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static
@@ -34,6 +35,10 @@ class EntryItem(ListItem):
 
 
 class Home(Screen):
+    BINDINGS = [
+        Binding("escape", "noop", show=False),
+    ]
+
     def compose(self):
         yield Static(LOGO, classes="logo", markup=False)
         yield Static("", classes="spacer")
@@ -103,6 +108,9 @@ class Home(Screen):
             if i < len(binds) - 1:
                 t.append("  ", style="#e5e5e5")
         return Static(t, classes="help-bar")
+
+    def action_noop(self):
+        pass
 
     def on_list_view_selected(self, event: ListView.Selected):
         item = event.item

@@ -137,6 +137,30 @@ async def test_escape_back_from_browser(app):
         assert pilot.app.screen_stack[-1].__class__.__name__ == "Home"
 
 
+@pytest.mark.asyncio
+async def test_escape_on_home_does_nothing(app):
+    """Esc on the home screen does not pop or blank the screen."""
+    async with app.run_test() as pilot:
+        await pilot.press("escape")
+        await pilot.pause()
+        assert len(pilot.app.screen_stack) >= 1
+        assert pilot.app.screen_stack[-1].__class__.__name__ == "Home"
+
+
+@pytest.mark.asyncio
+async def test_escape_after_navigation_does_not_blank(app):
+    """Esc after navigating back to home does not pop home."""
+    async with app.run_test() as pilot:
+        await pilot.press("i")
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        assert len(pilot.app.screen_stack) >= 1
+        assert pilot.app.screen_stack[-1].__class__.__name__ == "Home"
+
+
 # ── Browser flows ──────────────────────────────────────────────────
 
 
