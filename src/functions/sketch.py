@@ -1,8 +1,5 @@
 import json
-import os
-import signal
 import socket
-import sys
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -12,6 +9,7 @@ from .init import get_workspace_path
 from .core import _ts
 
 SKETCH_EXT = ".excalidraw"
+EXCALIDRAW_VERSION = "0.18.0"
 
 
 def _sketch_dir(container_type=None, container_name=None):
@@ -39,7 +37,10 @@ def create_sketch(name="", container_type=None, container_name=None):
                     "type": "excalidraw",
                     "version": 2,
                     "elements": [],
-                    "appState": {"gridSize": None, "viewBackgroundColor": "#0d0d0d"},
+                    "appState": {
+                        "gridSize": None,
+                        "viewBackgroundColor": "#0d0d0d",
+                    },
                 }
             )
         )
@@ -95,86 +96,75 @@ HTML_PAGE = """<!DOCTYPE html>
   <span id="save-status" class="status">ready</span>
 </div>
 <script type="module">
-import * as ExcalidrawLib from "https://esm.sh/@excalidraw/excalidraw@0.18.0";
+window.EXCALIDRAW_ASSET_PATH = "https://esm.sh/@excalidraw/excalidraw@" + EXCALIDRAW_VER + "/dist/prod/";
+
+import * as ExcalidrawLib from "https://esm.sh/@excalidraw/excalidraw@" + EXCALIDRAW_VER;
 import React from "https://esm.sh/react@19";
 import ReactDOM from "https://esm.sh/react-dom@19/client";
 
-const {Excalidraw, serializeAsJSON, restoreElements, restoreAppState, exportToBlob} = ExcalidrawLib;
+const {Excalidraw, restoreElements, restoreAppState, exportToSvg} = ExcalidrawLib;
 const API_ROOT = "http://localhost:PORT";
-let api = null;
+let excalidrawApi = null;
 
 async function loadScene() {
-  const r = await fetch(API_ROOT + "/load");
-  if (!r.ok) return;
-  const data = await r.json();
-  return data;
+  try {
+    const r = await fetch(API_ROOT + "/load");
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
 }
 
 async function saveScene(elements, appState, files) {
   document.getElementById("save-status").textContent = "saving...";
   const data = JSON.stringify({
-    type: "excalidraw",
-    version: 2,
-    elements: elements,
-    appState: appState,
-    files: files || {},
+    type: "excalidraw", version: 2,
+    elements, appState, files: files || {},
   });
-  const r = await fetch(API_ROOT + "/save", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: data,
-  });
-  if (r.ok) {
-    document.getElementById("save-status").textContent = "saved at " + new Date().toLocaleTimeString();
-  } else {
-    document.getElementById("save-status").textContent = "save failed!";
-  }
+  try {
+    const r = await fetch(API_ROOT + "/save", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: data,
+    });
+    if (r.ok) {
+      document.getElementById("save-status").textContent = "saved at " + new Date().toLocaleTimeString();
+      return true;
+    }
+  } catch {}
+  document.getElementById("save-status").textContent = "save failed!";
+  return false;
 }
 
 async function exportSVG(elements, appState, files) {
   try {
-    const blob = await exportToBlob({
+    const svg = await exportToSvg({
       elements, appState, files,
       exportPadding: 20,
       backgroundColor: "#0d0d0d",
     });
-    const reader = new FileReader();
-    reader.onload = function() {
-      const base64 = reader.result.split(",")[1];
-      fetch(API_ROOT + "/export-svg", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({svg: base64}),
-      });
-    };
-    reader.readAsDataURL(blob);
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(svg);
+    await fetch(API_ROOT + "/export-svg", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({svg: svgStr}),
+    });
   } catch(e) {
     console.log("SVG export:", e.message);
   }
 }
 
-const root = ReactDOM.createRoot(document.getElementById("excalidraw-wrapper"));
-
-loadScene().then((saved) => {
-  let initial = null;
-  if (saved && saved.elements && saved.elements.length > 0) {
-    initial = {
-      elements: restoreElements(saved.elements, null),
-      appState: restoreAppState(saved.appState || {}, null),
-      files: saved.files || {},
-    };
-  }
-
+function renderExcalidraw(initialData) {
+  const root = ReactDOM.createRoot(document.getElementById("excalidraw-wrapper"));
   root.render(React.createElement(Excalidraw, {
-    initialData: initial,
-    onChange: (elements, appState, files) => {
+    excalidrawAPI: (api) => { excalidrawApi = api; },
+    initialData: initialData || undefined,
+    onChange: (elements, _appState, _files) => {
       if (elements.length > 0) {
-        document.getElementById("save-status").textContent = "unsaved changes";
-      }
-    },
-    onPointerUp: (e) => {
-      const api = document.querySelector("excalidraw")?.__excalidraw_api;
-      if (api && api.getSceneElements().length > 0) {
+        const status = document.getElementById("save-status");
+        if (status.textContent !== "saving..." && !status.textContent.startsWith("saved")) {
+          status.textContent = "unsaved changes";
+        }
       }
     },
     theme: "dark",
@@ -183,17 +173,27 @@ loadScene().then((saved) => {
     gridModeEnabled: false,
     name: "SKETCH_NAME",
   }));
-});
+}
 
 document.getElementById("save-btn").addEventListener("click", async () => {
-  const el = document.querySelector("excalidraw");
-  if (!el || !el.__excalidraw_api) return;
-  const api = el.__excalidraw_api;
-  const elements = api.getSceneElements();
-  const appState = api.getAppState();
-  const files = api.getFiles();
-  await saveScene(elements, appState, files);
-  await exportSVG(elements, appState, files);
+  if (!excalidrawApi) return;
+  const elements = excalidrawApi.getSceneElements();
+  const appState = excalidrawApi.getAppState();
+  const files = excalidrawApi.getFiles();
+  const ok = await saveScene(elements, appState, files);
+  if (ok) exportSVG(elements, appState, files);
+});
+
+loadScene().then((saved) => {
+  if (saved && saved.elements && saved.elements.length > 0) {
+    renderExcalidraw({
+      elements: restoreElements(saved.elements, null),
+      appState: restoreAppState(saved.appState || {}, null),
+      files: saved.files || {},
+    });
+  } else {
+    renderExcalidraw(null);
+  }
 });
 </script>
 </body>
@@ -202,7 +202,6 @@ document.getElementById("save-btn").addEventListener("click", async () => {
 
 class SketchHandler(BaseHTTPRequestHandler):
     sketch_path = None
-    server_ref = None
 
     def log_message(self, fmt, *args):
         pass
@@ -228,10 +227,13 @@ class SketchHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"elements": [], "appState": {}})
         elif self.path == "/":
-            html = HTML_PAGE.replace("PORT", str(self.server.server_port))
-            html = html.replace(
-                "SKETCH_NAME",
-                Path(self.sketch_path).stem if self.sketch_path else "untitled",
+            html = (
+                HTML_PAGE.replace("PORT", str(self.server.server_port))
+                .replace(
+                    "SKETCH_NAME",
+                    Path(self.sketch_path).stem if self.sketch_path else "untitled",
+                )
+                .replace('" + EXCALIDRAW_VER + "', EXCALIDRAW_VERSION)
             )
             self._send_html(html)
         else:
@@ -251,28 +253,16 @@ class SketchHandler(BaseHTTPRequestHandler):
         if self.path == "/save":
             Path(self.sketch_path).write_text(body)
             self._send_json({"status": "ok"})
-
-            try:
-                data = json.loads(body)
-                self._export_svg(data)
-            except Exception:
-                pass
         elif self.path == "/export-svg":
             try:
                 data = json.loads(body)
                 svg_path = Path(self.sketch_path).with_suffix(".svg")
-                import base64
-
-                svg_data = base64.b64decode(data.get("svg", ""))
-                svg_path.write_bytes(svg_data)
+                svg_path.write_text(data.get("svg", ""))
             except Exception:
                 pass
             self._send_json({"status": "ok"})
         else:
             self._send_json({"error": "not found"}, 404)
-
-    def _export_svg(self, data):
-        pass
 
 
 def _find_free_port():
@@ -290,9 +280,8 @@ def open_sketch(path=None, container_type=None, container_name=None, sketch_name
     port = _find_free_port()
 
     def make_handler(*args):
-        handler = SketchHandler
-        handler.sketch_path = str(path)
-        return handler(*args)
+        SketchHandler.sketch_path = str(path)
+        return SketchHandler(*args)
 
     server = HTTPServer(("127.0.0.1", port), make_handler)
     thread = Thread(target=server.serve_forever, daemon=True)

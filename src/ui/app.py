@@ -6,6 +6,7 @@ from src.ui.screens.home import Home
 from src.ui.screens.capture import Capture
 from src.ui.screens.browser import Browser
 from src.ui.screens.help import HelpOverlay
+from src.functions import sketch
 
 
 class North(App):
@@ -171,6 +172,7 @@ class North(App):
         Binding("p", "browse('projects')", show=False, priority=True),
         Binding("d", "browse('domains')", show=False, priority=True),
         Binding("j", "browse('journal')", show=False, priority=True),
+        Binding("ctrl+d", "sketch", show=False, priority=True),
         Binding("t", "today", show=False, priority=True),
         Binding("?", "help", show=False, priority=True),
         Binding("q", "quit", show=False, priority=True),
@@ -204,6 +206,23 @@ class North(App):
 
     def action_browse(self, mode: str):
         self.push_screen(Browser(mode=mode))
+
+    def action_sketch(self):
+        mode, obj_name = self._capture_context()
+        container_type = None
+        container_name = None
+        if mode in ("project_items", "domain_items"):
+            container_type = mode.replace("_items", "")
+            container_name = obj_name
+        elif mode == "journal":
+            container_type = "journal"
+
+        with self.suspend():
+            sketch.open_sketch(
+                container_type=container_type,
+                container_name=container_name,
+            )
+        self.post_message(DataChanged())
 
     def action_today(self):
         self.push_screen(Capture(mode="journal"))
