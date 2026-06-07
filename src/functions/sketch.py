@@ -9,7 +9,7 @@ from .init import get_workspace_path
 from .core import _ts
 
 SKETCH_EXT = ".excalidraw"
-EXCALIDRAW_VERSION = "0.18.0"
+EXCALIDRAW_VERSION = "0.18.1"
 
 
 def _sketch_dir(container_type=None, container_name=None):
@@ -39,12 +39,32 @@ def create_sketch(name="", container_type=None, container_name=None):
                     "elements": [],
                     "appState": {
                         "gridSize": None,
-                        "viewBackgroundColor": "#0d0d0d",
+                        "viewBackgroundColor": "#ffffff",
+                        "collaborators": [],
                     },
+                    "files": {},
                 }
             )
         )
     return path
+
+
+def _normalize_scene(data: dict) -> dict:
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("type", "excalidraw")
+    data.setdefault("version", 2)
+    data.setdefault("elements", [])
+    data.setdefault("files", {})
+    app_state = data.setdefault("appState", {})
+    if not isinstance(app_state, dict):
+        app_state = {}
+        data["appState"] = app_state
+    if not isinstance(app_state.get("collaborators"), list):
+        app_state["collaborators"] = []
+    if not app_state.get("viewBackgroundColor"):
+        app_state["viewBackgroundColor"] = "#ffffff"
+    return data
 
 
 def list_sketches(container_type=None, container_name=None):
@@ -74,6 +94,10 @@ HTML_PAGE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>northh sketch</title>
+<link
+  rel="stylesheet"
+  href="https://esm.sh/@excalidraw/excalidraw@__EXCALIDRAW_VER__/dist/dev/index.css"
+/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body,#root,#excalidraw-wrapper{height:100vh;width:100vw;overflow:hidden}
@@ -84,23 +108,39 @@ HTML_PAGE = """<!DOCTYPE html>
   #save-bar button{background:#f59e0b;color:#0d0d0d;border:none;
     border-radius:4px;padding:6px 16px;cursor:pointer;font-weight:600}
   #save-bar button:hover{background:#d97706}
+  #rename-btn{background:#333!important;color:#e5e5e5!important;font-size:12px;padding:6px 10px!important}
+  #rename-btn:hover{background:#444!important}
   #save-bar .status{color:#888;font-size:13px}
-  #save-bar .sketch-name{color:#f59e0b;font-size:13px}
+  #save-bar .sketch-name{color:#f59e0b;font-size:13px;cursor:pointer}
+  #rename-input{background:#141414;color:#e5e5e5;border:1px solid #f59e0b;
+    border-radius:4px;padding:2px 8px;font-size:13px;width:200px;outline:none}
 </style>
 </head>
 <body>
 <div id="root"><div id="excalidraw-wrapper"></div></div>
 <div id="save-bar">
-  <span class="sketch-name">SKETCH_NAME</span>
+  <span id="sketch-name-display" class="sketch-name">SKETCH_NAME</span>
+  <button id="rename-btn">Rename</button>
   <button id="save-btn">Save to northh</button>
   <span id="save-status" class="status">ready</span>
 </div>
+<script>
+  window.EXCALIDRAW_ASSET_PATH = "https://esm.sh/@excalidraw/excalidraw@__EXCALIDRAW_VER__/dist/prod/";
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19",
+    "react/": "https://esm.sh/react@19/",
+    "react-dom": "https://esm.sh/react-dom@19",
+    "react-dom/": "https://esm.sh/react-dom@19/"
+  }
+}
+</script>
 <script type="module">
-window.EXCALIDRAW_ASSET_PATH = "https://esm.sh/@excalidraw/excalidraw@" + EXCALIDRAW_VER + "/dist/prod/";
-
-import * as ExcalidrawLib from "https://esm.sh/@excalidraw/excalidraw@" + EXCALIDRAW_VER;
-import React from "https://esm.sh/react@19";
-import ReactDOM from "https://esm.sh/react-dom@19/client";
+import * as ExcalidrawLib from "https://esm.sh/@excalidraw/excalidraw@__EXCALIDRAW_VER__?external=react,react-dom";
+import React from "react";
+import { createRoot } from "react-dom/client";
 
 const {Excalidraw, restoreElements, restoreAppState, exportToSvg} = ExcalidrawLib;
 const API_ROOT = "http://localhost:PORT";
@@ -110,7 +150,12 @@ async function loadScene() {
   try {
     const r = await fetch(API_ROOT + "/load");
     if (!r.ok) return null;
-    return await r.json();
+    const data = await r.json();
+    if (!data.appState) data.appState = {};
+    if (!Array.isArray(data.appState.collaborators)) data.appState.collaborators = [];
+    if (!data.files) data.files = {};
+    if (!data.elements) data.elements = [];
+    return data;
   } catch { return null; }
 }
 
@@ -118,7 +163,9 @@ async function saveScene(elements, appState, files) {
   document.getElementById("save-status").textContent = "saving...";
   const data = JSON.stringify({
     type: "excalidraw", version: 2,
-    elements, appState, files: files || {},
+    elements,
+    appState: {...appState, collaborators: appState.collaborators || []},
+    files: files || {},
   });
   try {
     const r = await fetch(API_ROOT + "/save", {
@@ -140,7 +187,7 @@ async function exportSVG(elements, appState, files) {
     const svg = await exportToSvg({
       elements, appState, files,
       exportPadding: 20,
-      backgroundColor: "#0d0d0d",
+      backgroundColor: appState.viewBackgroundColor || "#ffffff",
     });
     const serializer = new XMLSerializer();
     const svgStr = serializer.serializeToString(svg);
@@ -155,7 +202,7 @@ async function exportSVG(elements, appState, files) {
 }
 
 function renderExcalidraw(initialData) {
-  const root = ReactDOM.createRoot(document.getElementById("excalidraw-wrapper"));
+  const root = createRoot(document.getElementById("excalidraw-wrapper"));
   root.render(React.createElement(Excalidraw, {
     excalidrawAPI: (api) => { excalidrawApi = api; },
     initialData: initialData || undefined,
@@ -167,7 +214,7 @@ function renderExcalidraw(initialData) {
         }
       }
     },
-    theme: "dark",
+    theme: "light",
     viewModeEnabled: false,
     zenModeEnabled: false,
     gridModeEnabled: false,
@@ -175,20 +222,92 @@ function renderExcalidraw(initialData) {
   }));
 }
 
-document.getElementById("save-btn").addEventListener("click", async () => {
-  if (!excalidrawApi) return;
-  const elements = excalidrawApi.getSceneElements();
+function buildScene() {
+  if (!excalidrawApi) return null;
   const appState = excalidrawApi.getAppState();
-  const files = excalidrawApi.getFiles();
-  const ok = await saveScene(elements, appState, files);
-  if (ok) exportSVG(elements, appState, files);
+  if (!Array.isArray(appState.collaborators)) appState.collaborators = [];
+  return {
+    elements: excalidrawApi.getSceneElements(),
+    appState,
+    files: excalidrawApi.getFiles(),
+  };
+}
+
+async function renameSketch(newName) {
+  const r = await fetch(API_ROOT + "/rename", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({name: newName}),
+  });
+  return r.ok ? r.json() : null;
+}
+
+document.getElementById("rename-btn").addEventListener("click", () => {
+  const display = document.getElementById("sketch-name-display");
+  const current = display.textContent;
+  const input = document.createElement("input");
+  input.id = "rename-input";
+  input.type = "text";
+  input.value = current;
+  display.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== current) {
+      document.getElementById("save-status").textContent = "renaming...";
+      const result = await renameSketch(newName);
+      if (result) {
+        const newDisplay = document.createElement("span");
+        newDisplay.id = "sketch-name-display";
+        newDisplay.className = "sketch-name";
+        newDisplay.textContent = result.name;
+        input.replaceWith(newDisplay);
+        document.getElementById("save-status").textContent = "renamed";
+        history.replaceState(null, "", "/" + result.name);
+      } else {
+        document.getElementById("save-status").textContent = "rename failed!";
+        const orig = document.createElement("span");
+        orig.id = "sketch-name-display";
+        orig.className = "sketch-name";
+        orig.textContent = current;
+        input.replaceWith(orig);
+      }
+    } else {
+      const orig = document.createElement("span");
+      orig.id = "sketch-name-display";
+      orig.className = "sketch-name";
+      orig.textContent = current;
+      input.replaceWith(orig);
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { input.blur(); }
+    if (e.key === "Escape") {
+      const orig = document.createElement("span");
+      orig.id = "sketch-name-display";
+      orig.className = "sketch-name";
+      orig.textContent = current;
+      input.replaceWith(orig);
+    }
+  });
+  input.addEventListener("blur", finish);
+});
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  const scene = buildScene();
+  if (!scene) return;
+  const ok = await saveScene(scene.elements, scene.appState, scene.files);
+  if (ok) exportSVG(scene.elements, scene.appState, scene.files);
 });
 
 loadScene().then((saved) => {
-  if (saved && saved.elements && saved.elements.length > 0) {
+  if (saved && saved.elements) {
     renderExcalidraw({
       elements: restoreElements(saved.elements, null),
-      appState: restoreAppState(saved.appState || {}, null),
+      appState: restoreAppState(saved.appState || {collaborators: []}, null),
       files: saved.files || {},
     });
   } else {
@@ -202,6 +321,7 @@ loadScene().then((saved) => {
 
 class SketchHandler(BaseHTTPRequestHandler):
     sketch_path = None
+    sketch_name = None
 
     def log_message(self, fmt, *args):
         pass
@@ -219,21 +339,30 @@ class SketchHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html.encode())
 
+    def _valid_paths(self):
+        paths = ["/"]
+        if self.sketch_path:
+            paths.append("/" + Path(self.sketch_path).stem)
+        return paths
+
     def do_GET(self):
         if self.path == "/load":
             if self.sketch_path and Path(self.sketch_path).exists():
-                data = json.loads(Path(self.sketch_path).read_text())
+                data = _normalize_scene(json.loads(Path(self.sketch_path).read_text()))
                 self._send_json(data)
             else:
-                self._send_json({"elements": [], "appState": {}})
-        elif self.path == "/":
+                self._send_json(_normalize_scene({"elements": [], "appState": {}}))
+        elif self.path in self._valid_paths():
+            name = type(self).sketch_name or (
+                Path(self.sketch_path).stem if self.sketch_path else "untitled"
+            )
             html = (
-                HTML_PAGE.replace("PORT", str(self.server.server_port))
+                HTML_PAGE.replace("__EXCALIDRAW_VER__", EXCALIDRAW_VERSION)
+                .replace("PORT", str(self.server.server_port))
                 .replace(
                     "SKETCH_NAME",
-                    Path(self.sketch_path).stem if self.sketch_path else "untitled",
+                    name,
                 )
-                .replace('" + EXCALIDRAW_VER + "', EXCALIDRAW_VERSION)
             )
             self._send_html(html)
         else:
@@ -251,8 +380,35 @@ class SketchHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(length).decode()
 
         if self.path == "/save":
-            Path(self.sketch_path).write_text(body)
+            try:
+                data = _normalize_scene(json.loads(body))
+                Path(self.sketch_path).write_text(json.dumps(data))
+            except Exception:
+                Path(self.sketch_path).write_text(body)
             self._send_json({"status": "ok"})
+        elif self.path == "/rename":
+            try:
+                data = json.loads(body)
+                new_name = data.get("name", "").strip()
+                old_path = Path(self.sketch_path)
+                new_path = old_path.with_stem(new_name)
+                if new_name and not new_path.exists():
+                    old_path.rename(new_path)
+                    svg_old = old_path.with_suffix(".svg")
+                    if svg_old.exists():
+                        svg_old.rename(new_path.with_suffix(".svg"))
+                    type(self).sketch_path = str(new_path)
+                    type(self).sketch_name = new_name
+                    self.sketch_path = str(new_path)
+                    self._send_json(
+                        {"status": "ok", "name": new_name, "path": str(new_path)}
+                    )
+                else:
+                    self._send_json(
+                        {"status": "error", "message": "invalid or exists"}, 400
+                    )
+            except Exception as e:
+                self._send_json({"status": "error", "message": str(e)}, 400)
         elif self.path == "/export-svg":
             try:
                 data = json.loads(body)
@@ -281,13 +437,14 @@ def open_sketch(path=None, container_type=None, container_name=None, sketch_name
 
     def make_handler(*args):
         SketchHandler.sketch_path = str(path)
+        SketchHandler.sketch_name = path.stem
         return SketchHandler(*args)
 
     server = HTTPServer(("127.0.0.1", port), make_handler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
 
-    url = f"http://127.0.0.1:{port}/"
+    url = f"http://127.0.0.1:{port}/{path.stem}"
     print(f"\n  sketch: {path.name}")
     print(f"  open:   {url}")
     print(f"  path:   {path}")

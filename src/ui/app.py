@@ -172,6 +172,7 @@ class North(App):
         Binding("p", "browse('projects')", show=False, priority=True),
         Binding("d", "browse('domains')", show=False, priority=True),
         Binding("j", "browse('journal')", show=False, priority=True),
+        Binding("s", "browse('sketches')", show=False, priority=True),
         Binding("ctrl+d", "sketch", show=False, priority=True),
         Binding("t", "today", show=False, priority=True),
         Binding("?", "help", show=False, priority=True),

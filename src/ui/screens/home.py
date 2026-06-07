@@ -6,6 +6,7 @@ from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static
 
+from src.functions import sketch as sketch_fn
 from src.functions.list import recent_entries
 from src.ui.messages import DataChanged
 
@@ -48,6 +49,7 @@ class Home(Screen):
             yield Static("  [P]      Projects", classes="shortcut-row", markup=False)
             yield Static("  [D]      Domains", classes="shortcut-row", markup=False)
             yield Static("  [J]      Journal", classes="shortcut-row", markup=False)
+            yield Static("  [S]      Sketches", classes="shortcut-row", markup=False)
             yield Static(
                 "  [T]      Today's Journal", classes="shortcut-row", markup=False
             )
@@ -93,6 +95,7 @@ class Home(Screen):
             ("[P]", "Projects"),
             ("[D]", "Domains"),
             ("[J]", "Journal"),
+            ("[S]", "Sketches"),
             ("[T]", "Today"),
             ("[?]", "Help"),
             ("[Q]", "Quit"),
@@ -109,6 +112,11 @@ class Home(Screen):
         if isinstance(item, EntryItem):
             path = Path(item.entry["path"])
             if path.exists():
+                if item.entry.get("area") == "sketch":
+                    with self.app.suspend():
+                        sketch_fn.open_sketch(path=str(path))
+                    self.app.post_message(DataChanged())
+                    return
                 import subprocess
                 from src.functions.editor import open_args
 

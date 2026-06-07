@@ -7,6 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Input, Label, ListItem, ListView, Static
 
 from src.functions import list as flist
+from src.functions import sketch
 from src.ui.messages import DataChanged
 from src.ui.screens.capture import Capture
 from src.ui.screens.new_entry import NewEntry
@@ -60,6 +61,7 @@ class Browser(Screen):
             "projects": "projects",
             "domains": "domains",
             "journal": "journal",
+            "sketches": "sketches",
         }
         if self.mode in labels:
             return f"  {labels[self.mode]}"
@@ -87,6 +89,8 @@ class Browser(Screen):
             return flist.get_domains()
         if self.mode == "journal":
             return flist.get_journal_entries()
+        if self.mode == "sketches":
+            return flist.get_sketches()
         if self.mode == "project_items":
             return flist.get_project_entries(self.obj_name)
         if self.mode == "domain_items":
@@ -113,7 +117,13 @@ class Browser(Screen):
         lower = filter_text.lower()
         result = []
 
-        if self.mode in ("ideas", "journal", "project_items", "domain_items"):
+        if self.mode in (
+            "ideas",
+            "journal",
+            "sketches",
+            "project_items",
+            "domain_items",
+        ):
             for entry in self._raw_data:
                 if (
                     not filter_text
@@ -134,8 +144,12 @@ class Browser(Screen):
         t.append(" Filter  ", style="#e5e5e5")
         t.append("[N]", style="bold #f59e0b")
         t.append(" New  ", style="#e5e5e5")
-        t.append("[Space]", style="bold #f59e0b")
-        t.append(" Capture  ", style="#e5e5e5")
+        if self.mode == "sketches":
+            t.append("[Ctrl+D]", style="bold #f59e0b")
+            t.append(" Sketch  ", style="#e5e5e5")
+        else:
+            t.append("[Space]", style="bold #f59e0b")
+            t.append(" Capture  ", style="#e5e5e5")
         if self.mode == "journal":
             t.append("[T]", style="bold #f59e0b")
             t.append(" Today  ", style="#e5e5e5")
@@ -158,6 +172,10 @@ class Browser(Screen):
             self.app.push_screen(NewEntry("domain"))
         elif self.mode == "domain_items":
             self.app.push_screen(NewEntry("domain", self.obj_name))
+        elif self.mode == "sketches":
+            with self.app.suspend():
+                sketch.open_sketch()
+            self.app.post_message(DataChanged())
 
     def action_open_entry(self):
         list_view = self.query_one("#browser-list", ListView)
@@ -165,13 +183,19 @@ class Browser(Screen):
         if not isinstance(item, EntryItem):
             return
         path = Path(item.entry["path"])
-        if path.exists():
-            import subprocess
-            from src.functions.editor import open_args
-
+        if not path.exists():
+            return
+        if path.suffix == ".excalidraw":
             with self.app.suspend():
-                subprocess.run(open_args(str(path), line=item.entry.get("line")))
+                sketch.open_sketch(path=str(path))
             self.app.post_message(DataChanged())
+            return
+        import subprocess
+        from src.functions.editor import open_args
+
+        with self.app.suspend():
+            subprocess.run(open_args(str(path), line=item.entry.get("line")))
+        self.app.post_message(DataChanged())
 
     def action_focus_filter(self):
         self.query_one("#filter-input", Input).focus()
@@ -188,6 +212,11 @@ class Browser(Screen):
         if isinstance(item, EntryItem):
             path = Path(item.entry["path"])
             if path.exists():
+                if path.suffix == ".excalidraw":
+                    with self.app.suspend():
+                        sketch.open_sketch(path=str(path))
+                    self.app.post_message(DataChanged())
+                    return
                 import subprocess
                 from src.functions.editor import open_args
 

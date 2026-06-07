@@ -6,11 +6,13 @@
 North App
 │
 ├── Home ............................................ (start)
-│   ├── [Space] → Capture
-│   ├── [I]     → Browser (ideas)
-│   ├── [P]     → Browser (projects)
-│   ├── [D]     → Browser (domains)
-│   ├── [J]     → Browser (journal)
+│   ├── [Space] → Quick Capture
+│   ├── [I]     → Browse Ideas
+│   ├── [P]     → Browse Projects
+│   ├── [D]     → Browse Domains
+│   ├── [J]     → Browse Journal
+│   ├── [S]     → Browse Sketches
+│   ├── [Ctrl+D]→ New Sketch (browser)
 │   ├── [T]     → Capture (journal)
 │   ├── [?]     → HelpOverlay
 │   └── [Q]     → exit
@@ -65,6 +67,13 @@ North App
 │       ├── [Space]  → Capture (journal) → appends to today's file
 │       ├── [T]      → Capture (journal) → today's entry
 │       ├── [Enter]  → open entry in $EDITOR (with line#) → reload
+│       ├── [/]      → focus filter
+│       └── [Esc]    → back
+│
+│   └── mode: sketches
+│       ├── [N]      → New Sketch → opens Excalidraw in browser
+│       ├── [Ctrl+D] → New Sketch (same as N)
+│       ├── [Enter]  → open sketch in Excalidraw browser
 │       ├── [/]      → focus filter
 │       └── [Esc]    → back
 │
@@ -161,6 +170,40 @@ Home → [J] → Browser (journal) → [T]
   → same Capture (journal)
 ```
 
+### New Sketch (from Home)
+```
+Home → [Ctrl+D]
+  → suspends TUI
+  → opens Excalidraw in browser
+  → draw → click "Save to northh" → saves .excalidraw + .svg
+  → press Enter in terminal → TUI resumes → Home reloads
+```
+
+### Open Existing Sketch
+```
+Home → [S]
+  → Browser (sketches)
+    → [Enter] on sketch
+      → suspends TUI
+      → opens Excalidraw in browser with existing elements loaded
+      → draw more → "Save to northh" → saves
+      → press Enter → TUI resumes → browser reloads
+```
+
+### Context-Aware Sketch
+```
+When [Ctrl+D] is pressed:
+  Top of stack         → Sketch saves to
+  ─────────────        ─────────────────────────
+  Home                 → sketches/<timestamp>.excalidraw
+  Browser(ideas)       → sketches/<timestamp>.excalidraw
+  Browser(projects)    → sketches/<timestamp>.excalidraw
+  Browser(domains)     → sketches/<timestamp>.excalidraw
+  Browser(project_items) → projects/<name>/<timestamp>.excalidraw
+  Browser(domain_items)  → domains/<name>/<timestamp>.excalidraw
+  Browser(journal)       → journal/<timestamp>.excalidraw
+```
+
 ### Open Journal Entry in Editor
 ```
 Home → [J]
@@ -194,6 +237,8 @@ When [Space] is pressed:
 |             | P         | Browse Projects            |
 |             | D         | Browse Domains             |
 |             | J         | Browse Journal             |
+|             | S         | Browse Sketches            |
+|             | Ctrl+D    | New Sketch                 |
 |             | T         | Today's Journal            |
 |             | ?         | Help                       |
 |             | Q         | Quit                       |
@@ -206,6 +251,7 @@ When [Space] is pressed:
 |             | /         | Focus filter               |
 |             | Esc       | Back                       |
 |             | T         | Today (journal only)       |
+|             | Ctrl+D    | New Sketch (sketches mode) |
 | **NewEntry**| Ctrl+S    | Submit / save              |
 |             | Enter     | Next step / new line       |
 |             | Esc       | Cancel                     |

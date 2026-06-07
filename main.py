@@ -19,6 +19,7 @@ commands:
   list projects           list projects
   list domains            list domains
   list journal            list journal entries
+  list sketches           list sketches
   list project <name>     list entries in a project
   list domain <name>      list entries in a domain
   sketch [name]           open a sketch in the browser (optionally name it)
@@ -133,6 +134,9 @@ def main():
             list_fn.projects()
             list_fn.domains()
             list_fn.journal()
+            list_fn.sketches()
+        elif sys.argv[2] == "sketches":
+            list_fn.sketches()
         elif sys.argv[2] == "ideas":
             list_fn.ideas()
         elif sys.argv[2] == "projects":
