@@ -1,9 +1,33 @@
+import json
 from pathlib import Path
 
 from .init import get_workspace_path
 
 
 # ── helpers ──────────────────────────────────────────────
+
+
+def _scan_sketch_dir(directory: Path) -> list[dict]:
+    entries = []
+    if not directory.exists():
+        return entries
+    for f in sorted(directory.glob("*.excalidraw"), reverse=True):
+        stat = f.stat()
+        try:
+            data = json.loads(f.read_text())
+            n = len(data.get("elements", []))
+            preview = f"{n} elements" if n else "empty sketch"
+        except Exception:
+            preview = "invalid sketch"
+        entries.append(
+            {
+                "path": str(f),
+                "name": f.stem,
+                "preview": preview,
+                "mtime": stat.st_mtime,
+            }
+        )
+    return entries
 
 
 def _scan_dir(directory: Path) -> list[dict]:
@@ -96,6 +120,21 @@ def recent_entries(limit: int = 20) -> list[dict]:
                         }
                     )
 
+    sketches_dir = ws / "sketches"
+    if sketches_dir.exists():
+        for f in sorted(sketches_dir.glob("*.excalidraw"), reverse=True):
+            stat = f.stat()
+            entries.append(
+                {
+                    "area": "sketch",
+                    "container": None,
+                    "path": str(f),
+                    "name": f.stem,
+                    "preview": f"saved sketch ({len(json.loads(f.read_text()).get('elements', []))} elements)",
+                    "mtime": stat.st_mtime,
+                }
+            )
+
     entries.sort(key=lambda e: e["mtime"], reverse=True)
     return entries[:limit]
 
@@ -160,11 +199,29 @@ def get_journal_entries() -> list[dict]:
     return entries
 
 
+def get_sketches() -> list[dict]:
+    return _scan_sketch_dir(get_workspace_path() / "sketches")
+
+
 def get_ideas() -> list[dict]:
     return _scan_dir(get_workspace_path() / "ideas")
 
 
 # ── CLI display functions ────────────────────────────────
+
+
+def _print_sketches(directory, label):
+    ws = get_workspace_path()
+    path = ws / directory
+    if not path.exists():
+        print(f"no {label} found")
+        return
+    files = sorted(path.glob("*.excalidraw"))
+    if not files:
+        print(f"no {label} found")
+        return
+    for f in files:
+        print(f"  {f.stem}")
 
 
 def _print_entries(directory, label):
@@ -181,6 +238,10 @@ def _print_entries(directory, label):
         if f.is_file() and f.suffix == ".md":
             first_line = f.read_text().split("\n")[0].strip()
             print(f"  {f.name}  {first_line}")
+
+
+def sketches() -> None:
+    _print_sketches("sketches", "sketches")
 
 
 def ideas() -> None:

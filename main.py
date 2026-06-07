@@ -1,6 +1,6 @@
 import sys
 
-from src.functions import core, init, list as list_fn
+from src.functions import core, init, list as list_fn, sketch
 
 USAGE = """usage: northh <command> [args] [--voice] [--lang en|hi]
 
@@ -21,6 +21,10 @@ commands:
   list journal            list journal entries
   list project <name>     list entries in a project
   list domain <name>      list entries in a domain
+  sketch [name]           open a sketch in the browser (optionally name it)
+  sketch <name> -p proj   open a project-specific sketch
+  sketch <name> -d dom    open a domain-specific sketch
+  sketch <name> -j        open a journal sketch
 
 options:
   --voice                 record via microphone
@@ -149,6 +153,43 @@ def main():
             list_fn.domain(sys.argv[3])
         else:
             print(f"unknown list type: {sys.argv[2]}")
+    elif cmd == "sketch":
+        name = ""
+        project = ""
+        domain = ""
+        journal = False
+        args = sys.argv[2:]
+        i = 0
+        while i < len(args):
+            if args[i] == "-p" and i + 1 < len(args):
+                project = args[i + 1]
+                i += 2
+            elif args[i] == "-d" and i + 1 < len(args):
+                domain = args[i + 1]
+                i += 2
+            elif args[i] == "-j":
+                journal = True
+                i += 1
+            else:
+                name = args[i]
+                i += 1
+
+        container_type = None
+        container_name = None
+        if project:
+            container_type = "project"
+            container_name = project
+        elif domain:
+            container_type = "domain"
+            container_name = domain
+        elif journal:
+            container_type = "journal"
+
+        sketch.open_sketch(
+            sketch_name=name or None,
+            container_type=container_type,
+            container_name=container_name,
+        )
     elif cmd in ("-h", "--help", "help"):
         print(USAGE)
     else:
