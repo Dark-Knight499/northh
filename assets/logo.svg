@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="gs" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer ring (compass/north star) -->
+  <circle cx="64" cy="64" r="48" fill="none" stroke="url(#g)" stroke-width="3" opacity="0.15"/>
+
+  <!-- Inner ring -->
+  <circle cx="64" cy="64" r="44" fill="none" stroke="url(#g)" stroke-width="1.5" opacity="0.08"/>
+
+  <!-- North star (4-point) -->
+  <!-- Top point -->
+  <polygon points="64,16 68,56 64,64 60,56" fill="url(#g)"/>
+  <!-- Bottom point -->
+  <polygon points="64,112 60,72 64,64 68,72" fill="url(#gs)"/>
+  <!-- Right point -->
+  <polygon points="112,64 72,68 64,64 72,60" fill="url(#g)"/>
+  <!-- Left point -->
+  <polygon points="16,64 56,60 64,64 56,68" fill="url(#gs)"/>
+
+  <!-- Center diamond -->
+  <polygon points="64,48 80,64 64,80 48,64" fill="url(#g)" opacity="0.9"/>
+
+  <!-- Stylized 'n' character in center -->
+  <path d="M58,55 L58,75 M58,55 L72,75" stroke="#0f172a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Subtle ring dots (compass markings) -->
+  <circle cx="64" cy="20" r="1.5" fill="#f59e0b" opacity="0.4"/>
+  <circle cx="64" cy="108" r="1.5" fill="#f59e0b" opacity="0.4"/>
+  <circle cx="20" cy="64" r="1.5" fill="#f59e0b" opacity="0.4"/>
+  <circle cx="108" cy="64" r="1.5" fill="#f59e0b" opacity="0.4"/>
+</svg>
